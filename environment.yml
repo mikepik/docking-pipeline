@@ -1,0 +1,17 @@
+name: docking_env
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - rdkit
+  - openbabel
+  - autodock-vina
+  - requests
+  - pyyaml
+  - jupyterlab
+  - ipykernel
+  - numpy
+  - pandas
+  - matplotlib
+
