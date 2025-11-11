@@ -5,7 +5,7 @@
 
 # (Preferred) PDB ID to download from RCSB
 # Example: 4DIU
-pdb_id: 4DIU
+pdb_id: 2GAT
 
 # (Optional) Path to a pre-prepared receptor file (.pdbqt)
 # If this is provided, the pipeline will SKIP downloading and preparing the receptor.

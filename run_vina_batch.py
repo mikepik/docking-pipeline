@@ -1,53 +1,65 @@
 #!/usr/bin/env python3
-import os
-import sys
-import subprocess
-from time import time
+import os, sys, subprocess, argparse
+
+def parse_args():
+    p = argparse.ArgumentParser(
+        description="Batch runner for AutoDock Vina over a directory of ligand PDBQT files."
+    )
+    p.add_argument("receptor", help="Path to receptor .pdbqt")
+    p.add_argument("ligands_dir", help="Directory containing ligand .pdbqt files")
+    p.add_argument("results_dir", help="Output directory for docked poses")
+    p.add_argument("config", help="Vina config file (e.g., vina_config.txt)")
+    p.add_argument("--cpu", type=int, default=8, help="Number of CPU cores for Vina (default: 8)")
+    return p.parse_args()
+
+def fail(msg, code=2):
+    print(f"❌ {msg}")
+    sys.exit(code)
 
 def main():
-    if len(sys.argv) != 5:
-        print("Usage: python3 run_vina_batch.py receptor.pdbqt ligands_dir results_dir config.txt")
-        sys.exit(1)
+    args = parse_args()
 
-    receptor = sys.argv[1]
-    ligands_dir = sys.argv[2]
-    results_dir = sys.argv[3]
-    config_file = sys.argv[4]
+    # Validate inputs
+    if not os.path.isfile(args.receptor):
+        fail(f"Receptor not found: {args.receptor}")
+    if not os.path.isfile(args.config):
+        fail(f"Vina config not found: {args.config}")
+    if not os.path.isdir(args.ligands_dir):
+        fail(f"Ligands directory not found: {args.ligands_dir}")
 
-    os.makedirs(results_dir, exist_ok=True)
-    ligands = [os.path.join(ligands_dir, f) for f in os.listdir(ligands_dir) if f.endswith(".pdbqt")]
+    ligands = [f for f in os.listdir(args.ligands_dir) if f.endswith(".pdbqt")]
+    ligands.sort()
+    if not ligands:
+        fail(f"No .pdbqt ligands found in {args.ligands_dir}")
+
+    os.makedirs(args.results_dir, exist_ok=True)
 
     total = len(ligands)
-    print(f"\n🧩 Docking {total} ligands using AutoDock Vina...\n")
-
-    start_time = time()
-
-    for i, ligand_file in enumerate(ligands):
-        ligand_name = os.path.basename(ligand_file)
-        out_file = os.path.join(results_dir, ligand_name.replace(".pdbqt", "_out.pdbqt"))
+    completed = 0
+    for i, lig in enumerate(ligands, 1):
+        lig_path = os.path.join(args.ligands_dir, lig)
+        out_name = os.path.splitext(lig)[0] + "_out.pdbqt"
+        out_path = os.path.join(args.results_dir, out_name)
 
         cmd = [
             "vina",
-            "--receptor", receptor,
-            "--ligand", ligand_file,
-            "--config", config_file,
-            "--out", out_file
+            "--receptor", args.receptor,
+            "--ligand", lig_path,
+            "--config", args.config,
+            "--out", out_path,
+            "--cpu", str(args.cpu),
         ]
 
         try:
             subprocess.run(cmd, check=True)
+            completed += 1
         except subprocess.CalledProcessError as e:
-            print(f"⚠️  Vina failed for {ligand_name}: {e}")
+            print(f"⚠️  Vina failed for {lig}: {e}")
 
-        elapsed = time() - start_time
-        avg_time = elapsed / (i + 1)
-        est_remaining = avg_time * (total - (i + 1))
-        print(f"⏱️  Completed {i + 1}/{total} ligands "
-              f"(avg {avg_time:.1f}s/ligand, est {est_remaining/60:.1f} min remaining)\n")
+        print(f"⏱️  Completed {i}/{total} ligands")
 
-    total_time = (time() - start_time) / 60
-    print(f"✅ Docking completed for {total} ligands in {total_time:.1f} minutes.")
-    print(f"✅ Results stored in: {results_dir}")
+    print(f"\n✅ Docking completed for {completed}/{total} ligands.")
+    print(f"✅ Results stored in: {args.results_dir}")
 
 if __name__ == "__main__":
     main()
