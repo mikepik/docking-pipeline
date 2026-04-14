@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 import os
 import csv
-import re
-import subprocess
 import sys
 
 def parse_vina_output(pdbqt_path):
@@ -48,16 +46,14 @@ def main(results_dir):
     for lig, sc in scores[:5]:
         print(f"  {lig:30s} {sc:8.2f}")
 
-    # Try to auto-open the CSV file
-    try:
-        if sys.platform.startswith("linux"):
-            subprocess.run(["xdg-open", csv_path])
-        elif sys.platform == "darwin":
-            subprocess.run(["open", csv_path])
-        elif sys.platform.startswith("win"):
-            os.startfile(csv_path)
-    except Exception as e:
-        print(f"⚠️  Could not auto-open CSV: {e}")
+    # Write simple text summary of top ligands
+    txt_path = os.path.join(results_dir, "top_ligands.txt")
+    with open(txt_path, "w") as f:
+        f.write("Top ligands:\n")
+        for i, (ligand, score) in enumerate(scores[:5], 1):
+            f.write(f"{i}. {ligand}\t{score:.2f} kcal/mol\n")
+
+    print(f"📝 Wrote summary to: {txt_path}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -66,4 +62,3 @@ if __name__ == "__main__":
     results_dir = sys.argv[1]
     print("🚀 Summarizing docking results...")
     main(results_dir)
-

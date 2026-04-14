@@ -18,6 +18,9 @@ def fail(msg, code=2):
 
 def main():
     args = parse_args()
+     # 👇 Add this line immediately after args = parse_args() to make sure using right file
+    print(f"🔧 Using run_vina_batch.py at: {os.path.abspath(__file__)}  |  cpu={args.cpu}")
+
 
     # Validate inputs
     if not os.path.isfile(args.receptor):

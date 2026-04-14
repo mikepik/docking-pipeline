@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import csv, os, sys, shutil
+import csv
+import os
+import sys
+import shutil
 
 def main(receptor, results_dir="results/", top_n=5):
     results_dir = os.path.abspath(results_dir)
@@ -21,9 +24,13 @@ def main(receptor, results_dir="results/", top_n=5):
         reader = csv.DictReader(f)
         rows = sorted(reader, key=lambda r: float(r["Best ΔG (kcal/mol)"]))
 
-    top_rows = rows[:top_n]
+    # Only include negative-energy ligands in ChimeraX export
+    top_rows = [r for r in rows if float(r["Best ΔG (kcal/mol)"]) < 0][:top_n]
 
-    print(f"📦 Preparing top {top_n} ligands for ChimeraX display...")
+    print(f"📦 Preparing {len(top_rows)} negative-energy ligands for ChimeraX display...")
+    if not top_rows:
+        print("⚠️ No negative-energy ligands found; ChimeraX file will contain receptor only.")
+
     cxc_path = os.path.join(results_dir, "view_top_ligands.cxc")
     with open(cxc_path, "w") as cxc:
         cxc.write(f"open {receptor}\n")
@@ -38,12 +45,11 @@ def main(receptor, results_dir="results/", top_n=5):
                 print(f"  ✅ {ligand_name}")
             else:
                 print(f"  ⚠️ Missing docked file for {ligand_name}")
-        cxc.write("preset apply pub 3\n")
         cxc.write("view\n")
 
     abs_cxc = os.path.abspath(cxc_path)
     print(f"\n✅ Created ChimeraX command file: {abs_cxc}")
-    print(f"💡 To open in ChimeraX, copy and paste this command:")
+    print("💡 To open in ChimeraX, copy and paste this command:")
     print(f"\n   chimerax @{abs_cxc}\n")
 
 if __name__ == "__main__":
@@ -52,14 +58,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     receptor = sys.argv[1]
-    # detect whether the 2nd argument is a directory name or a number
     results_dir = sys.argv[2] if len(sys.argv) > 2 and not sys.argv[2].isdigit() else "results/"
     top_n = int(sys.argv[3]) if len(sys.argv) > 3 else (
         int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 5
     )
 
     main(receptor, results_dir, top_n)
-
-
-
-
